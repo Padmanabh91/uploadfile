@@ -5,33 +5,256 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>File Upload</title>
     <style>
-      body { font-family: system-ui, sans-serif; max-width: 32rem; margin: 3rem auto; padding: 0 1rem; }
-      label { display: block; margin-bottom: 0.5rem; }
-      button { margin-top: 1rem; padding: 0.4rem 1.2rem; }
-      p { margin-top: 1rem; overflow-wrap: anywhere; }
-      #success { color: #166534; }
-      #error { color: #b91c1c; }
+      :root {
+        color-scheme: light;
+        --page: #f1f3f6;
+        --card: #ffffff;
+        --ink: #1b2430;
+        --muted: #55606e;
+        --line: #e1e5ea;
+        --zone: #f8f9fb;
+        --zone-edge: #828fa0;
+        --accent: #2748c9;
+        --accent-dark: #1d379b;
+        --accent-tint: #edf1fd;
+        --focus: #1d379b;
+      }
+
+      /* Author display rules would otherwise override the hidden attribute. */
+      [hidden] { display: none !important; }
+
+      *, *::before, *::after { box-sizing: border-box; }
+
+      body {
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        min-height: 100dvh;
+        margin: 0;
+        padding: 1rem;
+        background: var(--page);
+        color: var(--ink);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 1rem;
+        line-height: 1.5;
+      }
+
+      .card {
+        width: 100%;
+        max-width: 30rem;
+        padding: 2rem;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 1rem;
+        box-shadow: 0 1px 2px rgb(27 36 48 / 6%), 0 12px 32px rgb(27 36 48 / 8%);
+      }
+
+      h1 { margin: 0; font-size: 1.625rem; line-height: 1.25; letter-spacing: -0.01em; }
+      .intro { margin: 0.25rem 0 1.5rem; color: var(--muted); }
+
+      label { display: block; margin-bottom: 0.5rem; font-size: 0.9375rem; font-weight: 600; }
+
+      /* The real input fills the zone, so clicks and file drops work natively.
+         The icon and hint sit on top and let the pointer pass through. */
+      .dropzone { position: relative; }
+
+      .dropzone-prompt {
+        position: absolute;
+        inset: 1.25rem 1rem auto;
+        color: var(--muted);
+        font-size: 0.9375rem;
+        text-align: center;
+        pointer-events: none;
+      }
+
+      .dropzone-prompt svg { display: block; width: 2.5rem; height: 2.5rem; margin: 0 auto 0.25rem; color: var(--accent); }
+
+      #file {
+        display: block;
+        width: 100%;
+        padding: 6.25rem 1rem 1.25rem;
+        background: var(--zone);
+        border: 2px dashed var(--zone-edge);
+        border-radius: 0.75rem;
+        color: var(--ink);
+        font: inherit;
+        font-size: 0.875rem;
+        overflow-wrap: anywhere;
+        cursor: pointer;
+        transition: background-color 0.15s, border-color 0.15s;
+      }
+
+      #file:hover, #file.is-dragging { background: var(--accent-tint); border-color: var(--accent); }
+
+      #file::file-selector-button {
+        margin-right: 0.75rem;
+        padding: 0.375rem 0.875rem;
+        background: var(--card);
+        border: 1px solid var(--zone-edge);
+        border-radius: 0.5rem;
+        color: var(--ink);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      #upload {
+        width: 100%;
+        margin-top: 1rem;
+        padding: 0.75rem 1.25rem;
+        background: var(--accent);
+        border: 0;
+        border-radius: 0.625rem;
+        color: #ffffff;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.15s;
+      }
+
+      #upload:hover { background: var(--accent-dark); }
+      #upload:disabled { background: #626e7d; cursor: progress; }
+
+      :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+      #success, #error {
+        display: flex;
+        gap: 0.625rem;
+        margin: 1rem 0 0;
+        padding: 0.75rem 0.875rem;
+        border: 1px solid;
+        border-radius: 0.625rem;
+        font-size: 0.9375rem;
+        overflow-wrap: anywhere;
+      }
+
+      /* Icons are CSS so the script can replace the message text without removing them. */
+      #success::before, #error::before {
+        content: "";
+        flex: none;
+        width: 1.25rem;
+        height: 1.25rem;
+        margin-top: 0.0625rem;
+        background: center / contain no-repeat;
+      }
+
+      #success { background: #e9f9ef; border-color: #7fd8a0; color: #14532d; }
+      #success::before {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='10' fill='%2315803d'/%3E%3Cpath d='m5.5 10.5 3 3 6-6.5' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      }
+
+      #error { background: #fdecec; border-color: #f2a3a3; color: #8f1a1a; }
+      #error::before {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='10' fill='%23c02626'/%3E%3Cpath d='M10 5v6' stroke='%23fff' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='10' cy='14.5' r='1.25' fill='%23fff'/%3E%3C/svg%3E");
+      }
+
+      .uploaded { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
+      h2 { margin: 0 0 0.5rem; font-size: 0.9375rem; line-height: 1.4; }
+      .uploaded ul { margin: 0; padding: 0; list-style: none; }
+
+      .uploaded li { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; }
+      .uploaded li + li { border-top: 1px solid var(--line); }
+
+      .file-icon {
+        flex: none;
+        display: grid;
+        place-items: end center;
+        width: 2.125rem;
+        height: 2.625rem;
+        padding-bottom: 0.3125rem;
+        border-radius: 0.25rem;
+        clip-path: polygon(0 0, 68% 0, 100% 26%, 100% 100%, 0 100%);
+        font-size: 0.625rem;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .file-icon.pdf { background: #fbdfdf; color: #8f1a1a; }
+      .file-icon.xlsx { background: #d5f3e0; color: #14532d; }
+
+      .file-name { flex: 1; min-width: 0; font-size: 0.9375rem; overflow-wrap: anywhere; }
+      .file-size { flex: none; color: var(--muted); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+
+      @media (max-width: 30rem) {
+        body { place-items: start center; padding: 0.75rem; }
+        .card { padding: 1.25rem; }
+        h1 { font-size: 1.4375rem; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #file, #upload { transition: none; }
+      }
     </style>
   </head>
   <body>
-    <h1>File Upload</h1>
-    <form id="upload-form" novalidate>
-      <label for="file">Choose a PDF or Excel (.xlsx) file, up to 2 MB</label>
-      <input id="file" name="file" type="file" />
-      <div><button id="upload" type="submit">Upload</button></div>
-    </form>
-    <p id="success" role="status" hidden></p>
-    <p id="error" role="alert" hidden></p>
+    <main class="card">
+      <h1>File Upload</h1>
+      <p class="intro">Files are checked, never stored.</p>
+      <form id="upload-form" novalidate>
+        <label for="file">Choose a PDF or Excel (.xlsx) file, up to 2 MB</label>
+        <div class="dropzone">
+          <div class="dropzone-prompt">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="M7 18a4.5 4.5 0 0 1-.7-8.95 6 6 0 0 1 11.4 0A4.5 4.5 0 0 1 17 18" />
+              <path d="M12 20v-8m-3.25 3L12 11.75 15.25 15" />
+            </svg>
+            <span>PDF or Excel, up to 2 MB</span>
+          </div>
+          <input id="file" name="file" type="file" />
+        </div>
+        <div><button id="upload" type="submit">Upload</button></div>
+      </form>
+      <p id="success" role="status" hidden></p>
+      <p id="error" role="alert" hidden></p>
+
+      <section id="uploaded" class="uploaded" aria-labelledby="uploaded-heading" hidden>
+        <h2 id="uploaded-heading">Uploaded files</h2>
+        <ul id="uploaded-list"></ul>
+      </section>
+    </main>
 
     <script>
       const form = document.getElementById('upload-form');
+      const fileInput = document.getElementById('file');
       const button = document.getElementById('upload');
       const success = document.getElementById('success');
       const error = document.getElementById('error');
+      const uploaded = document.getElementById('uploaded');
+      const uploadedList = document.getElementById('uploaded-list');
 
       function show(element, text) {
         element.textContent = text;
         element.hidden = false;
+      }
+
+      function formatSize(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+      }
+
+      function textSpan(className, text) {
+        const span = document.createElement('span');
+        span.className = className;
+        span.textContent = text;
+        return span;
+      }
+
+      function addUploadedFile(name, size) {
+        const isPdf = name.toLowerCase().endsWith('.pdf');
+        const icon = textSpan(`file-icon ${isPdf ? 'pdf' : 'xlsx'}`, isPdf ? 'PDF' : 'XLSX');
+        icon.setAttribute('aria-hidden', 'true');
+
+        const item = document.createElement('li');
+        item.append(icon, textSpan('file-name', name), textSpan('file-size', formatSize(size)));
+        uploadedList.prepend(item);
+        uploaded.hidden = false;
+      }
+
+      // Dragging a file does not trigger :hover, so the highlight needs a class.
+      fileInput.addEventListener('dragenter', () => fileInput.classList.add('is-dragging'));
+      for (const type of ['dragleave', 'drop']) {
+        fileInput.addEventListener(type, () => fileInput.classList.remove('is-dragging'));
       }
 
       form.addEventListener('submit', async (event) => {
@@ -40,10 +263,15 @@
         error.hidden = true;
         button.disabled = true;
         try {
+          const selected = fileInput.files[0];
           const response = await fetch('/upload', { method: 'POST', body: new FormData(form) });
           const body = await response.json();
-          if (response.ok) show(success, `${body.message}: ${body.filename}`);
-          else show(error, body.error);
+          if (response.ok) {
+            show(success, `${body.message}: ${body.filename}`);
+            addUploadedFile(body.filename, selected.size);
+          } else {
+            show(error, body.error);
+          }
         } catch {
           show(error, 'Upload failed, please try again');
         } finally {
