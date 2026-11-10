@@ -3,6 +3,7 @@ const {
   MAX_SIZE,
   MB,
   MESSAGES,
+  docxRenamedXlsx,
   emptyPdf,
   exeFile,
   exeRenamedPdf,
@@ -10,8 +11,11 @@ const {
   jpgFile,
   pdfOfSize,
   textFile,
+  validDoc,
+  validDocx,
   validPdf,
   validXlsx,
+  xlsxRenamedDocx,
 } = require('./support/files');
 
 const uploadFile = (request, file) => request.post('/upload', { multipart: { file } });
@@ -30,6 +34,8 @@ test.describe('POST /upload', () => {
   const accepted = [
     ['valid PDF', validPdf()],
     ['valid .xlsx', validXlsx()],
+    ['valid .docx', validDocx()],
+    ['valid .doc', validDoc()],
     ['PDF with an upper-case extension', validPdf('REPORT.PDF')],
   ];
 
@@ -45,6 +51,8 @@ test.describe('POST /upload', () => {
     ['.exe file', exeFile()],
     ['.exe renamed .pdf', exeRenamedPdf()],
     ['.exe renamed .xlsx', exeRenamedXlsx()],
+    ['.docx renamed .xlsx', docxRenamedXlsx()],
+    ['.xlsx renamed .docx', xlsxRenamedDocx()],
     ['real PDF named .txt', validPdf('document.txt')],
   ];
 

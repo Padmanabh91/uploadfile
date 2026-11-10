@@ -4,11 +4,11 @@ A one-page Express upload app and the Playwright suite that tests it.
 
 ## What it tests
 
-The server accepts `.pdf` and `.xlsx` files up to 2 MB (2,097,152 bytes). It checks both the extension and the file signature.
+The server accepts `.pdf`, `.doc`, `.docx` and `.xlsx` files up to 2 MB (2,097,152 bytes). It checks the extension and the file signature, and for `.docx` and `.xlsx` the contents of the archive.
 
 | Rule | Message |
 | --- | --- |
-| Wrong extension or signature | Only PDF and Excel (.xlsx) files are allowed |
+| Wrong extension or signature, or a `.docx` without `word/` or `.xlsx` without `xl/` (so a `.docx` renamed `.xlsx`, and the reverse, is rejected) | Only PDF, Word (.doc, .docx) and Excel (.xlsx) files are allowed |
 | Over 2 MB | File is too large (max 2 MB) |
 | Zero bytes | File is empty |
 | No file sent | Please choose a file |
@@ -38,4 +38,5 @@ Built with Claude Code from a one-phase specification. The only dependencies are
 - Multipart bodies are read with `express.raw` and parsed by Node's built-in `Response.formData()`, so no upload library is needed.
 - Uploads are validated in memory and never saved.
 - Checks run in this order: extension, empty, size, signature.
-- The `.xlsx` signature is the ZIP header, so a plain ZIP archive renamed `.xlsx` is accepted. The checks do not open the archive.
+- `.docx` and `.xlsx` must have the ZIP header and an entry under `word/` or `xl/` in the ZIP directory, so a plain ZIP archive with either extension is rejected. Entries are not decompressed.
+- `.doc` is checked by its OLE signature only, so any other OLE file renamed `.doc`, such as a legacy `.xls`, is accepted.

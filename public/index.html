@@ -98,6 +98,28 @@
         cursor: pointer;
       }
 
+      /* Keeps the native filename from running underneath the Remove button. */
+      #file:has(+ #remove:not([hidden])) { padding-right: 6rem; }
+
+      /* Positioned, so it paints above the input that fills the zone. */
+      #remove {
+        position: absolute;
+        right: calc(1rem + 2px);
+        bottom: calc(1.25rem + 2px);
+        padding: 0.375rem 0.75rem;
+        background: var(--card);
+        border: 1px solid var(--zone-edge);
+        border-radius: 0.5rem;
+        color: var(--ink);
+        font: inherit;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      #remove:hover { border-color: var(--accent); color: var(--accent); }
+      #remove:disabled { color: var(--muted); cursor: progress; }
+
       #upload {
         width: 100%;
         margin-top: 1rem;
@@ -171,6 +193,7 @@
 
       .file-icon.pdf { background: #fbdfdf; color: #8f1a1a; }
       .file-icon.xlsx { background: #d5f3e0; color: #14532d; }
+      .file-icon.doc, .file-icon.docx { background: #dbe6fb; color: #1d379b; }
 
       .file-name { flex: 1; min-width: 0; font-size: 0.9375rem; overflow-wrap: anywhere; }
       .file-size { flex: none; color: var(--muted); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
@@ -191,16 +214,17 @@
       <h1>File Upload</h1>
       <p class="intro">Files are checked, never stored.</p>
       <form id="upload-form" novalidate>
-        <label for="file">Choose a PDF or Excel (.xlsx) file, up to 2 MB</label>
+        <label for="file">Choose a PDF, Word (.doc, .docx) or Excel (.xlsx) file, up to 2 MB</label>
         <div class="dropzone">
           <div class="dropzone-prompt">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
               <path d="M7 18a4.5 4.5 0 0 1-.7-8.95 6 6 0 0 1 11.4 0A4.5 4.5 0 0 1 17 18" />
               <path d="M12 20v-8m-3.25 3L12 11.75 15.25 15" />
             </svg>
-            <span>PDF or Excel, up to 2 MB</span>
+            <span>PDF, Word or Excel, up to 2 MB</span>
           </div>
           <input id="file" name="file" type="file" />
+          <button id="remove" type="button" hidden>Remove</button>
         </div>
         <div><button id="upload" type="submit">Upload</button></div>
       </form>
@@ -217,6 +241,7 @@
       const form = document.getElementById('upload-form');
       const fileInput = document.getElementById('file');
       const button = document.getElementById('upload');
+      const removeButton = document.getElementById('remove');
       const success = document.getElementById('success');
       const error = document.getElementById('error');
       const uploaded = document.getElementById('uploaded');
@@ -241,8 +266,8 @@
       }
 
       function addUploadedFile(name, size) {
-        const isPdf = name.toLowerCase().endsWith('.pdf');
-        const icon = textSpan(`file-icon ${isPdf ? 'pdf' : 'xlsx'}`, isPdf ? 'PDF' : 'XLSX');
+        const extension = name.split('.').pop().toLowerCase();
+        const icon = textSpan(`file-icon ${extension}`, extension.toUpperCase());
         icon.setAttribute('aria-hidden', 'true');
 
         const item = document.createElement('li');
@@ -257,11 +282,26 @@
         fileInput.addEventListener(type, () => fileInput.classList.remove('is-dragging'));
       }
 
+      fileInput.addEventListener('change', () => {
+        removeButton.hidden = fileInput.files.length === 0;
+      });
+
+      removeButton.addEventListener('click', () => {
+        fileInput.value = '';
+        removeButton.hidden = true;
+        success.hidden = true;
+        error.hidden = true;
+        // The focused button has just been hidden, so keep keyboard users in place.
+        fileInput.focus();
+      });
+
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
         success.hidden = true;
         error.hidden = true;
         button.disabled = true;
+        // Otherwise a response landing after Remove would bring a message back.
+        removeButton.disabled = true;
         try {
           const selected = fileInput.files[0];
           const response = await fetch('/upload', { method: 'POST', body: new FormData(form) });
@@ -276,6 +316,7 @@
           show(error, 'Upload failed, please try again');
         } finally {
           button.disabled = false;
+          removeButton.disabled = false;
         }
       });
     </script>

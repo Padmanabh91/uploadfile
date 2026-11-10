@@ -3,6 +3,7 @@ class UploadPage {
     this.page = page;
     this.fileInput = page.locator('#file');
     this.uploadButton = page.getByRole('button', { name: 'Upload' });
+    this.removeButton = page.getByRole('button', { name: 'Remove' });
     this.successMessage = page.locator('#success');
     this.errorMessage = page.locator('#error');
   }

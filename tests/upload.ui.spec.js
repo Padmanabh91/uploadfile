@@ -80,4 +80,12 @@ test.describe('Upload page', () => {
     await uploadPage.upload(validPdf());
     await expectSuccess('valid.pdf');
   });
+
+  test('Remove empties the input so Upload reports a missing file', async () => {
+    await uploadPage.fileInput.setInputFiles(validPdf());
+    await uploadPage.removeButton.click();
+    await expect(uploadPage.fileInput).toHaveValue('');
+    await uploadPage.upload();
+    await expectError(MESSAGES.missing);
+  });
 });

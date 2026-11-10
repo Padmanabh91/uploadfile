@@ -4,7 +4,7 @@ const MB = 1024 * 1024;
 const MAX_SIZE = 2 * MB;
 
 const MESSAGES = {
-  type: 'Only PDF and Excel (.xlsx) files are allowed',
+  type: 'Only PDF, Word (.doc, .docx) and Excel (.xlsx) files are allowed',
   tooLarge: 'File is too large (max 2 MB)',
   empty: 'File is empty',
   missing: 'Please choose a file',
@@ -84,11 +84,48 @@ function buildZip(entries) {
   return Buffer.concat([...records, centralDirectory, end]);
 }
 
+const xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+const relationships = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+const packageRelationships = 'http://schemas.openxmlformats.org/package/2006/relationships';
+
+function buildDocx() {
+  const main = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+  return buildZip([
+    [
+      '[Content_Types].xml',
+      `${xml}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+        '<Default Extension="xml" ContentType="application/xml"/>' +
+        '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+        '</Types>',
+    ],
+    [
+      '_rels/.rels',
+      `${xml}<Relationships xmlns="${packageRelationships}">` +
+        `<Relationship Id="rId1" Type="${relationships}/officeDocument" Target="word/document.xml"/>` +
+        '</Relationships>',
+    ],
+    [
+      'word/document.xml',
+      `${xml}<w:document xmlns:w="${main}"><w:body><w:p><w:r><w:t>Hello</w:t></w:r></w:p></w:body></w:document>`,
+    ],
+  ]);
+}
+
+// Only the 512-byte OLE header of a legacy .doc: the server checks nothing past the signature.
+function buildDoc() {
+  const header = Buffer.alloc(512);
+  Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]).copy(header);
+  header.writeUInt16LE(0x003e, 24); // minor version
+  header.writeUInt16LE(0x0003, 26); // major version
+  header.writeUInt16LE(0xfffe, 28); // byte order mark
+  header.writeUInt16LE(9, 30); // 512-byte sectors
+  header.writeUInt16LE(6, 32); // 64-byte mini sectors
+  return header;
+}
+
 function buildXlsx() {
-  const xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
   const main = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
-  const relationships = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
-  const packageRelationships = 'http://schemas.openxmlformats.org/package/2006/relationships';
   return buildZip([
     [
       '[Content_Types].xml',
@@ -127,10 +164,14 @@ const file = (name, mimeType, buffer) => ({ name, mimeType, buffer });
 
 const PDF_TYPE = 'application/pdf';
 const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const DOC_TYPE = 'application/msword';
+const DOCX_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const exeBytes = () => Buffer.concat([Buffer.from('MZ', 'latin1'), Buffer.alloc(256, 0x90)]);
 
 const validPdf = (name = 'valid.pdf') => file(name, PDF_TYPE, buildPdf());
 const validXlsx = (name = 'valid.xlsx') => file(name, XLSX_TYPE, buildXlsx());
+const validDocx = (name = 'valid.docx') => file(name, DOCX_TYPE, buildDocx());
+const validDoc = (name = 'valid.doc') => file(name, DOC_TYPE, buildDoc());
 const textFile = () => file('notes.txt', 'text/plain', Buffer.from('plain text'));
 const jpgFile = () =>
   file('photo.jpg', 'image/jpeg', Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49, 0x46]));
@@ -138,6 +179,8 @@ const exeFile = () => file('program.exe', 'application/octet-stream', exeBytes()
 // The browser-style MIME type is deliberately misleading: only the content gives these away.
 const exeRenamedPdf = () => file('renamed.pdf', PDF_TYPE, exeBytes());
 const exeRenamedXlsx = () => file('renamed.xlsx', XLSX_TYPE, exeBytes());
+const docxRenamedXlsx = () => file('renamed.xlsx', XLSX_TYPE, buildDocx());
+const xlsxRenamedDocx = () => file('renamed.docx', DOCX_TYPE, buildXlsx());
 const emptyPdf = () => file('empty.pdf', PDF_TYPE, Buffer.alloc(0));
 
 // A valid PDF padded with trailing spaces to exactly the requested size.
@@ -150,6 +193,7 @@ module.exports = {
   MAX_SIZE,
   MB,
   MESSAGES,
+  docxRenamedXlsx,
   emptyPdf,
   exeFile,
   exeRenamedPdf,
@@ -157,6 +201,9 @@ module.exports = {
   jpgFile,
   pdfOfSize,
   textFile,
+  validDoc,
+  validDocx,
   validPdf,
   validXlsx,
+  xlsxRenamedDocx,
 };
