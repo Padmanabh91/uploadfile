@@ -1,0 +1,22 @@
+{
+  "name": "file-upload-testing-framework",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A small upload app and the Playwright suite that tests it.",
+  "license": "UNLICENSED",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "playwright test",
+    "report": "playwright show-report"
+  },
+  "dependencies": {
+    "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0"
+  }
+}

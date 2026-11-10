@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>File Upload</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 32rem; margin: 3rem auto; padding: 0 1rem; }
+      label { display: block; margin-bottom: 0.5rem; }
+      button { margin-top: 1rem; padding: 0.4rem 1.2rem; }
+      p { margin-top: 1rem; overflow-wrap: anywhere; }
+      #success { color: #166534; }
+      #error { color: #b91c1c; }
+    </style>
+  </head>
+  <body>
+    <h1>File Upload</h1>
+    <form id="upload-form" novalidate>
+      <label for="file">Choose a PDF or Excel (.xlsx) file, up to 2 MB</label>
+      <input id="file" name="file" type="file" />
+      <div><button id="upload" type="submit">Upload</button></div>
+    </form>
+    <p id="success" role="status" hidden></p>
+    <p id="error" role="alert" hidden></p>
+
+    <script>
+      const form = document.getElementById('upload-form');
+      const button = document.getElementById('upload');
+      const success = document.getElementById('success');
+      const error = document.getElementById('error');
+
+      function show(element, text) {
+        element.textContent = text;
+        element.hidden = false;
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        success.hidden = true;
+        error.hidden = true;
+        button.disabled = true;
+        try {
+          const response = await fetch('/upload', { method: 'POST', body: new FormData(form) });
+          const body = await response.json();
+          if (response.ok) show(success, `${body.message}: ${body.filename}`);
+          else show(error, body.error);
+        } catch {
+          show(error, 'Upload failed, please try again');
+        } finally {
+          button.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
